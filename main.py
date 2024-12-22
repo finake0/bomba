@@ -229,4 +229,5 @@ if __name__ == '__main__':
 
     # Start both the bot polling and the aiohttp server
     loop.create_task(start_background_polling())
-    loop.run_until_complete(dp.start_polling(skip_updates=True))
+    await dp.start_polling(skip_updates=True)
+
