@@ -11,6 +11,7 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 import sqlite3
 import config
 import aiohttp
+from aiohttp import web
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -205,10 +206,21 @@ async def handle_phone_number(message: Message):
     else:
         await message.answer('Неправильный формат номера.')
 
+async def on_start(request):
+    return web.Response(text="Hello, Render!")
+
+async def start_background_polling():
+    port = int(os.getenv("PORT", 10000))
+    app = web.Application()
+    app.router.add_get('/', on_start)
+
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, '0.0.0.0', port)
+    await site.start()
+
+    await executor.start_polling(dp, skip_updates=True)
+
 if __name__ == '__main__':
     logging.info("Запуск бота...")
-    port = int(os.getenv("PORT", 10000))  # Чтение порта из переменной окружения или 10000 по умолчанию
-    from aiohttp import web
-    app = web.Application()
-    app.router.add_get('/', lambda request: web.Response(text="Hello, Render!"))
-    web.run_app(app, port=port)  # Запуск на заданном порту
+    asyncio.run(start_background_polling())
