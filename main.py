@@ -1,4 +1,3 @@
-import os
 from aiogram import *
 import fake_useragent
 import asyncio
@@ -11,7 +10,6 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 import sqlite3
 import config
 import aiohttp
-from aiohttp import web
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -112,7 +110,7 @@ async def back_to_admin_menu(message: Message):
         await message.answer('Вы не являетесь админом.')
 
 @dp.message_handler(text='Помощь 💻')
-@dp.throttled(anti_flood, rate=3)
+@dp.throttled(anti_flood,rate=3)
 async def help(message: types.Message):
     inline_keyboard = types.InlineKeyboardMarkup()
     code_sub = types.InlineKeyboardButton(text='Разработчик👨‍💻', url='https://t.me/finake')
@@ -206,26 +204,6 @@ async def handle_phone_number(message: Message):
     else:
         await message.answer('Неправильный формат номера.')
 
-async def on_start(request):
-    return web.Response(text="Hello, Render!")
-
-async def start_background_polling():
-    port = int(os.getenv("PORT", 10000))
-    app = web.Application()
-    app.router.add_get('/', on_start)
-
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, '0.0.0.0', port)
-    await site.start()
-
-    # Start polling without creating new event loop
-    await dp.start_polling(skip_updates=True)
-
-async def main():
-    logging.info("Запуск бота...")
-    # Start both the bot polling and the aiohttp server
-    await start_background_polling()
-
 if __name__ == '__main__':
-    asyncio.run(main())
+    logging.info("Запуск бота...")
+    executor.start_polling(dp, skip_updates=True)
