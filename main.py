@@ -224,4 +224,4 @@ async def start_background_polling():
 
 if __name__ == '__main__':
     logging.info("Запуск бота...")
-    asyncio.get_event_loop().run_until_complete(start_background_polling())
+    executor.start_polling(dp, skip_updates=True)  # Correctly start polling without explicit asyncio loop
