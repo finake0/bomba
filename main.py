@@ -112,7 +112,7 @@ async def back_to_admin_menu(message: Message):
         await message.answer('Вы не являетесь админом.')
 
 @dp.message_handler(text='Помощь 💻')
-@dp.throttled(anti_flood,rate=3)
+@dp.throttled(anti_flood, rate=3)
 async def help(message: types.Message):
     inline_keyboard = types.InlineKeyboardMarkup()
     code_sub = types.InlineKeyboardButton(text='Разработчик👨‍💻', url='https://t.me/finake')
@@ -224,4 +224,9 @@ async def start_background_polling():
 
 if __name__ == '__main__':
     logging.info("Запуск бота...")
-    executor.start_polling(dp, skip_updates=True)  # Correctly start polling without explicit asyncio loop
+
+    loop = asyncio.get_event_loop()
+
+    # Start both the bot polling and the aiohttp server
+    loop.create_task(start_background_polling())
+    loop.run_until_complete(dp.start_polling(skip_updates=True))
