@@ -219,8 +219,9 @@ async def start_background_polling():
     site = web.TCPSite(runner, '0.0.0.0', port)
     await site.start()
 
-    await executor.start_polling(dp, skip_updates=True)
+    # Start polling without creating new event loop
+    await dp.start_polling(skip_updates=True)
 
 if __name__ == '__main__':
     logging.info("Запуск бота...")
-    asyncio.run(start_background_polling())
+    asyncio.get_event_loop().run_until_complete(start_background_polling())
