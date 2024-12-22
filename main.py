@@ -1,3 +1,4 @@
+import os
 from aiogram import *
 import fake_useragent
 import asyncio
@@ -206,4 +207,8 @@ async def handle_phone_number(message: Message):
 
 if __name__ == '__main__':
     logging.info("Запуск бота...")
-    executor.start_polling(dp, skip_updates=True)
+    port = int(os.getenv("PORT", 10000))  # Чтение порта из переменной окружения или 10000 по умолчанию
+    from aiohttp import web
+    app = web.Application()
+    app.router.add_get('/', lambda request: web.Response(text="Hello, Render!"))
+    web.run_app(app, port=port)  # Запуск на заданном порту
