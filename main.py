@@ -222,12 +222,10 @@ async def start_background_polling():
     # Start polling without creating new event loop
     await dp.start_polling(skip_updates=True)
 
-if __name__ == '__main__':
+async def main():
     logging.info("Запуск бота...")
-
-    loop = asyncio.get_event_loop()
-
     # Start both the bot polling and the aiohttp server
-    loop.create_task(start_background_polling())
-    await dp.start_polling(skip_updates=True)
+    await start_background_polling()
 
+if __name__ == '__main__':
+    asyncio.run(main())
