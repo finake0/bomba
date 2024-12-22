@@ -5,6 +5,7 @@ import logging
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher import FSMContext
 from aiogram.types import Message
+from markups import checkSubMenu
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher.filters.state import State, StatesGroup
 import sqlite3
@@ -14,6 +15,8 @@ import aiohttp
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 ADMIN = 840987868
+channel_id = "-1002329551275"
+message = ("Приветствую.\nВы в главном меню.")
 
 conn = sqlite3.connect('db.db')
 cur = conn.cursor()
@@ -27,6 +30,15 @@ cur.execute("""CREATE TABLE IF NOT EXISTS users(
 storage = MemoryStorage()
 bot = Bot(token=config.token)
 dp = Dispatcher(bot, storage=storage)
+
+async def check_subscription_status(user_id):
+    try:
+        member = await bot.get_chat_member(chat_id=channel_id, user_id=user_id)
+        if member.status in {"member", "administrator", "creator"}:
+            return True
+    except Exception as e:
+        logging.error(f"Ошибка при проверке подписки: {e}")
+    return False
 
 async def anti_flood(*args, **kwargs):
     m = args[0]
@@ -50,16 +62,45 @@ async def add_user(user_id: int, name: str, username: str):
     await bot.send_message(ADMIN, f"Новый пользователь зарегистрировался в боте:\nИмя: {profile_link}", parse_mode='HTML')
     conn.commit()
 
+async def startuser(message:types.Message):
+    user_id = message.from_user.id
+    if await check_subscription_status(user_id):
+        await message.answer(message, reply_markup=profile_keyboard)
+    else:
+        await message.answer("Вы не подписаны", reply_markup=checkSubMenu)
+
 @dp.message_handler(commands=['start'])
 async def start(message: Message):
-    cur.execute(f"SELECT block FROM users WHERE user_id = {message.chat.id}")
+    user_id = message.from_user.id
+    cur.execute(f"SELECT block FROM users WHERE user_id = {user_id}")
     result = cur.fetchone()
+
     if message.from_user.id == ADMIN:
         await message.answer('Введите команду /admin', reply_markup=profile_keyboard)
     else:
         if result is None:
             await add_user(message.from_user.id, message.from_user.full_name, message.from_user.username)
-        await bot.send_message(message.chat.id, f"Приветствую, {message.from_user.first_name}\nВы в главном меню.", reply_markup=profile_keyboard)
+
+        if not await check_subscription_status(user_id):
+            await message.answer("Ты не подписан на наш канал!", reply_markup=checkSubMenu)
+            return
+        
+        await bot.send_message(user_id, f"Приветствую, {message.from_user.first_name}\nВы в главном меню.", reply_markup=profile_keyboard)
+
+
+@dp.callback_query_handler(text="subchanneldone")
+async def process_subscription_confirmation(callback_query: types.CallbackQuery):
+    user_id = callback_query.from_user.id
+    if await check_subscription_status(user_id):
+        cur.execute("UPDATE users SET block = 0 WHERE user_id = ?", (user_id,))
+        conn.commit()
+        await callback_query.answer("")
+        await bot.send_message(user_id, message, reply_markup=profile_keyboard)
+        await bot.delete_message(callback_query.message.chat.id, callback_query.message.message_id)
+    else:
+        await callback_query.answer("Ты до сих пор не подписан на канал...")
+
+
 
 @dp.message_handler(commands=['admin'])
 async def admin(message: Message):
@@ -202,7 +243,7 @@ async def handle_phone_number(message: Message):
         await message.answer(f'🇺🇦Атака началась на номер <pre>{number}</pre>', parse_mode="html")
         asyncio.create_task(start_attack(number))
     else:
-        await message.answer('Неправильный формат номера.')
+        await message.answer('Неверный формат номера.')
 
 if __name__ == '__main__':
     logging.info("Запуск бота...")
