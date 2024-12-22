@@ -117,7 +117,7 @@ async def back_to_admin_menu(message: Message):
         await message.answer('Вы не являетесь админом.')
 
 @dp.message_handler(text='Помощь 💻')
-@dp.throttled(anti_flood,rate=3)
+@dp.throttled(anti_flood, rate=3)
 async def help(message: types.Message):
     inline_keyboard = types.InlineKeyboardMarkup()
     code_sub = types.InlineKeyboardButton(text='Разработчик👨‍💻', url='https://t.me/finake')
@@ -212,8 +212,8 @@ async def start_spam(message: Message, state: FSMContext):
 # Основная функция для запуска
 async def on_start():
     loop = asyncio.get_event_loop()
-    loop.create_task(dp.start_polling())
-    uvicorn.run(app, host="0.0.0.0", port=10000)
+    loop.create_task(dp.start_polling())  # Запуск polling в текущем цикле
+    await uvicorn.run(app, host="0.0.0.0", port=10000)  # Запуск FastAPI в том же цикле
 
 if __name__ == "__main__":
-    asyncio.run(on_start())
+    asyncio.run(on_start())  # Теперь это работает корректно
